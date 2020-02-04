@@ -10,6 +10,6 @@ here is list (sudesh list)
 * peach
 * persimmon
 
-It looks fine
+It looks fine and correct! (sudesh)
 
 
