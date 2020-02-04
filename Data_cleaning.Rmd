@@ -1,16 +1,15 @@
 ---
-title: "Data Cleaning"
+title: "New File"
 author: "Sudesh Srivastav"
 date: "2/4/2020"
 output: html_document
 ---
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
-```
+## Analysis plan
 
-# Read in the Data
 
-# Make Data tidy
-
-# 
+- [Analysis Plan](Analysis-Plan.html)
+- Data Interpolation and Gap filling
+- Linear models
+- Animal movement models based on telemetry
+- Data visualization
