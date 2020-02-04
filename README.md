@@ -3,7 +3,7 @@ Training repository for NCEAS Workshop
 this is place to practice file 
 here is list
 
-* kiwi
+* kiwifruit
 * banana
 * apple
 * strawberry
