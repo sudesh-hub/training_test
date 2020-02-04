@@ -10,7 +10,7 @@ here is list (sudesh list)
 * peach
 * persimmon
 
-It looks fine and correct! (sudesh & kaitlyn agree)
+It looks fine and correct! (sudesh & kaitlyn agree) :)
 
 
 
