@@ -2,3 +2,11 @@
 Training repository for NCEAS Workshop
 this is place to practice file 
 here is list
+
+* kiwi
+* banana
+* apple
+* strawberry
+* peach
+
+
