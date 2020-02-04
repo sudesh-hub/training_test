@@ -8,5 +8,6 @@ here is list
 * apple
 * strawberry
 * peach
+* persimmon
 
 
