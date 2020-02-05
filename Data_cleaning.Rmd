@@ -5,11 +5,142 @@ date: "2/4/2020"
 output: html_document
 ---
 
-## Analysis plan
+```{r}
+library(dplyr)
+library(tidyr)
+```
+stats:filter()
+packages_name
 
 
-- [Analysis Plan](Analysis-Plan.html)
-- Data Interpolation and Gap filling
-- Linear models
-- Animal movement models based on telemetry
-- Data visualization
+```{r}
+catch_original <- read.csv(url("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.302.1", method = "libcurl"),
+                    stringsAsFactors = FALSE)
+# select(-All, -notesRegCode)
+head(catch_original)
+
+```
+
+## Make data tidy
+Remove the notes and alll columns we don't need them
+"I" in the Chinook column should be a 1
+```{r}
+catch_clean<- catch_original %>% 
+   select(-All, -notesRegCode) %>% 
+  mutate(Chinook = ifelse(Chinook == "I", 1, Chinook)) %>% 
+  mutate(Chinook = as.numeric(Chinook))
+head(catch_clean)
+```
+
+### Data QA
+Checking for NA values
+
+Determine which values were converted to NA by as.numeric()
+```{r}
+i<- which(is.na(catch_clean$Chinook))
+catch_original[i, ]
+```
+
+# convert to long format
+we want our data table to be in long format
+```{r}
+catch_long<-catch_clean %>% 
+  pivot_longer(cols= -c(Region, Year),
+              names_to="species", 
+              values_to="catch") %>% 
+rename(catch_thousands = catch) %>% 
+mutate(catch = catch_thousands * 1000) %>% 
+  select(-catch_thousands)
+head(catch_long)
+```
+#### Example of pivot_wider format
+
+```{r}
+catch_wide <-catch_long %>% 
+  pivot_wider(names_from = "Year", values_from = "catch")
+head(catch_wide)
+```
+
+## Summarize
+
+
+```{r}
+mean_region <- catch_long %>% 
+  group_by(Region) %>% 
+summarise(mean_catch=mean(catch), n_obs=n())
+head(mean_region)
+```
+```{r}
+n_region <- catch_long %>% 
+  group_by(Region) %>%
+  summarize(n = n())
+
+
+head(n_region)
+```
+```{r}
+SSE_catch <- catch_long %>% 
+  filter(Region == "SSE")
+
+
+head(SSE_catch)
+```
+
+```{r}
+region_defs <- read.csv(url("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.303.1",
+                            method = "libcurl"),
+                        stringsAsFactors = FALSE) %>% 
+    select(code, mgmtArea)
+
+head(region_defs)
+```
+
+
+```{r}
+catch_joined <- left_join(catch_long, region_defs, by = c("Region" = "code"))
+
+
+head(catch_joined)
+```
+```{r}
+region_defs <- region_defs %>% 
+  rename(Region = code, Region_Name = mgmtArea)
+
+
+catch_joined <- left_join(catch_long, region_defs, by = c("Region"))
+
+
+head(catch_joined)
+
+```
+
+```{r}
+sites_df <- data.frame(site = c("HAW-101",
+                                "HAW-103",
+                                "OAH-320",
+                                "OAH-219",
+                                "MAI-039"),
+                       stringsAsFactors = FALSE)
+
+
+sites_df %>% 
+  separate(site, c("island", "site_number"), "-")
+```
+
+```{r}
+dates_df <- data.frame(year = c("1930",
+                                "1930",
+                                "1930"),
+                       month = c("12",
+                                "12",
+                                "12"),
+                       day = c("14",
+                               "15",
+                               "16"),
+                       stringsAsFactors = FALSE)
+
+
+dates_df %>% 
+  unite(date, year, month, day, sep = "-")
+```
+
