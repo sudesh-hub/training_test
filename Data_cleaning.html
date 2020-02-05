@@ -369,15 +369,232 @@ summary {
 </div>
 
 
-<div id="analysis-plan" class="section level2">
-<h2>Analysis plan</h2>
-<ul>
-<li><a href="Analysis-Plan.html">Analysis Plan</a></li>
-<li>Data Interpolation and Gap filling</li>
-<li>Linear models</li>
-<li>Animal movement models based on telemetry</li>
-<li>Data visualization</li>
-</ul>
+<pre class="r"><code>library(dplyr)</code></pre>
+<pre><code>## 
+## Attaching package: &#39;dplyr&#39;</code></pre>
+<pre><code>## The following objects are masked from &#39;package:stats&#39;:
+## 
+##     filter, lag</code></pre>
+<pre><code>## The following objects are masked from &#39;package:base&#39;:
+## 
+##     intersect, setdiff, setequal, union</code></pre>
+<pre class="r"><code>library(tidyr)</code></pre>
+<p>stats:filter() packages_name</p>
+<pre class="r"><code>catch_original &lt;- read.csv(url(&quot;https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.302.1&quot;, method = &quot;libcurl&quot;),
+                    stringsAsFactors = FALSE)
+# select(-All, -notesRegCode)
+head(catch_original)</code></pre>
+<pre><code>##   Region Year Chinook Sockeye Coho Pink Chum All notesRegCode
+## 1    SSE 1886       0       5    0    0    0   5             
+## 2    SSE 1887       0     155    0    0    0 155             
+## 3    SSE 1888       0     224   16    0    0 240             
+## 4    SSE 1889       0     182   11   92    0 285             
+## 5    SSE 1890       0     251   42    0    0 292             
+## 6    SSE 1891       0     274   24    0    0 298</code></pre>
+<div id="make-data-tidy" class="section level2">
+<h2>Make data tidy</h2>
+<p>Remove the notes and alll columns we don’t need them “I” in the Chinook column should be a 1</p>
+<pre class="r"><code>catch_clean&lt;- catch_original %&gt;% 
+   select(-All, -notesRegCode) %&gt;% 
+  mutate(Chinook = ifelse(Chinook == &quot;I&quot;, 1, Chinook)) %&gt;% 
+  mutate(Chinook = as.numeric(Chinook))
+head(catch_clean)</code></pre>
+<pre><code>##   Region Year Chinook Sockeye Coho Pink Chum
+## 1    SSE 1886       0       5    0    0    0
+## 2    SSE 1887       0     155    0    0    0
+## 3    SSE 1888       0     224   16    0    0
+## 4    SSE 1889       0     182   11   92    0
+## 5    SSE 1890       0     251   42    0    0
+## 6    SSE 1891       0     274   24    0    0</code></pre>
+<div id="data-qa" class="section level3">
+<h3>Data QA</h3>
+<p>Checking for NA values</p>
+<p>Determine which values were converted to NA by as.numeric()</p>
+<pre class="r"><code>i&lt;- which(is.na(catch_clean$Chinook))
+catch_original[i, ]</code></pre>
+<pre><code>## [1] Region       Year         Chinook      Sockeye      Coho        
+## [6] Pink         Chum         All          notesRegCode
+## &lt;0 rows&gt; (or 0-length row.names)</code></pre>
+</div>
+</div>
+<div id="convert-to-long-format" class="section level1">
+<h1>convert to long format</h1>
+<p>we want our data table to be in long format</p>
+<pre class="r"><code>catch_long&lt;-catch_clean %&gt;% 
+  pivot_longer(cols= -c(Region, Year),
+              names_to=&quot;species&quot;, 
+              values_to=&quot;catch&quot;) %&gt;% 
+rename(catch_thousands = catch) %&gt;% 
+mutate(catch = catch_thousands * 1000) %&gt;% 
+  select(-catch_thousands)
+head(catch_long)</code></pre>
+<pre><code>## # A tibble: 6 x 4
+##   Region  Year species catch
+##   &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;   &lt;dbl&gt;
+## 1 SSE     1886 Chinook     0
+## 2 SSE     1886 Sockeye  5000
+## 3 SSE     1886 Coho        0
+## 4 SSE     1886 Pink        0
+## 5 SSE     1886 Chum        0
+## 6 SSE     1887 Chinook     0</code></pre>
+<div id="example-of-pivot_wider-format" class="section level4">
+<h4>Example of pivot_wider format</h4>
+<pre class="r"><code>catch_wide &lt;-catch_long %&gt;% 
+  pivot_wider(names_from = &quot;Year&quot;, values_from = &quot;catch&quot;)
+head(catch_wide)</code></pre>
+<pre><code>## # A tibble: 6 x 122
+##   Region species `1886` `1887` `1888` `1889` `1890` `1891` `1892` `1893` `1894`
+##   &lt;chr&gt;  &lt;chr&gt;    &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;  &lt;dbl&gt;
+## 1 SSE    Chinook      0      0      0      0      0      0      0      0      0
+## 2 SSE    Sockeye   5000 155000 224000 182000 251000 274000 207000 189000 253000
+## 3 SSE    Coho         0      0  16000  11000  42000  24000  11000   1000   5000
+## 4 SSE    Pink         0      0      0  92000      0      0   8000 187000 529000
+## 5 SSE    Chum         0      0      0      0      0      0      0      0      0
+## 6 NSE    Chinook      0      0      0      0      0      0      0      0   7000
+## # ... with 111 more variables: `1895` &lt;dbl&gt;, `1896` &lt;dbl&gt;, `1897` &lt;dbl&gt;,
+## #   `1898` &lt;dbl&gt;, `1899` &lt;dbl&gt;, `1900` &lt;dbl&gt;, `1901` &lt;dbl&gt;, `1902` &lt;dbl&gt;,
+## #   `1903` &lt;dbl&gt;, `1904` &lt;dbl&gt;, `1905` &lt;dbl&gt;, `1906` &lt;dbl&gt;, `1907` &lt;dbl&gt;,
+## #   `1908` &lt;dbl&gt;, `1909` &lt;dbl&gt;, `1910` &lt;dbl&gt;, `1911` &lt;dbl&gt;, `1912` &lt;dbl&gt;,
+## #   `1913` &lt;dbl&gt;, `1914` &lt;dbl&gt;, `1915` &lt;dbl&gt;, `1916` &lt;dbl&gt;, `1917` &lt;dbl&gt;,
+## #   `1918` &lt;dbl&gt;, `1919` &lt;dbl&gt;, `1920` &lt;dbl&gt;, `1921` &lt;dbl&gt;, `1922` &lt;dbl&gt;,
+## #   `1923` &lt;dbl&gt;, `1924` &lt;dbl&gt;, `1925` &lt;dbl&gt;, `1926` &lt;dbl&gt;, `1927` &lt;dbl&gt;,
+## #   `1928` &lt;dbl&gt;, `1929` &lt;dbl&gt;, `1930` &lt;dbl&gt;, `1931` &lt;dbl&gt;, `1932` &lt;dbl&gt;,
+## #   `1933` &lt;dbl&gt;, `1934` &lt;dbl&gt;, `1935` &lt;dbl&gt;, `1936` &lt;dbl&gt;, `1937` &lt;dbl&gt;,
+## #   `1938` &lt;dbl&gt;, `1939` &lt;dbl&gt;, `1940` &lt;dbl&gt;, `1941` &lt;dbl&gt;, `1942` &lt;dbl&gt;,
+## #   `1943` &lt;dbl&gt;, `1944` &lt;dbl&gt;, `1945` &lt;dbl&gt;, `1946` &lt;dbl&gt;, `1947` &lt;dbl&gt;,
+## #   `1948` &lt;dbl&gt;, `1949` &lt;dbl&gt;, `1950` &lt;dbl&gt;, `1951` &lt;dbl&gt;, `1952` &lt;dbl&gt;,
+## #   `1953` &lt;dbl&gt;, `1954` &lt;dbl&gt;, `1955` &lt;dbl&gt;, `1956` &lt;dbl&gt;, `1957` &lt;dbl&gt;,
+## #   `1958` &lt;dbl&gt;, `1959` &lt;dbl&gt;, `1960` &lt;dbl&gt;, `1961` &lt;dbl&gt;, `1962` &lt;dbl&gt;,
+## #   `1963` &lt;dbl&gt;, `1964` &lt;dbl&gt;, `1965` &lt;dbl&gt;, `1966` &lt;dbl&gt;, `1967` &lt;dbl&gt;,
+## #   `1968` &lt;dbl&gt;, `1969` &lt;dbl&gt;, `1970` &lt;dbl&gt;, `1971` &lt;dbl&gt;, `1972` &lt;dbl&gt;,
+## #   `1973` &lt;dbl&gt;, `1974` &lt;dbl&gt;, `1975` &lt;dbl&gt;, `1976` &lt;dbl&gt;, `1977` &lt;dbl&gt;,
+## #   `1978` &lt;dbl&gt;, `1979` &lt;dbl&gt;, `1980` &lt;dbl&gt;, `1981` &lt;dbl&gt;, `1982` &lt;dbl&gt;,
+## #   `1983` &lt;dbl&gt;, `1984` &lt;dbl&gt;, `1985` &lt;dbl&gt;, `1986` &lt;dbl&gt;, `1987` &lt;dbl&gt;,
+## #   `1988` &lt;dbl&gt;, `1989` &lt;dbl&gt;, `1990` &lt;dbl&gt;, `1991` &lt;dbl&gt;, `1992` &lt;dbl&gt;,
+## #   `1993` &lt;dbl&gt;, `1994` &lt;dbl&gt;, ...</code></pre>
+</div>
+<div id="summarize" class="section level2">
+<h2>Summarize</h2>
+<pre class="r"><code>mean_region &lt;- catch_long %&gt;% 
+  group_by(Region) %&gt;% 
+summarise(mean_catch=mean(catch), n_obs=n())
+head(mean_region)</code></pre>
+<pre><code>## # A tibble: 6 x 3
+##   Region mean_catch n_obs
+##   &lt;chr&gt;       &lt;dbl&gt; &lt;int&gt;
+## 1 ALU        40384.   435
+## 2 BER        16373.   510
+## 3 BRB      2709796.   570
+## 4 CHG       315487.   550
+## 5 CKI       683571.   525
+## 6 COP       179223.   470</code></pre>
+<pre class="r"><code>n_region &lt;- catch_long %&gt;% 
+  group_by(Region) %&gt;%
+  summarize(n = n())
+
+
+head(n_region)</code></pre>
+<pre><code>## # A tibble: 6 x 2
+##   Region     n
+##   &lt;chr&gt;  &lt;int&gt;
+## 1 ALU      435
+## 2 BER      510
+## 3 BRB      570
+## 4 CHG      550
+## 5 CKI      525
+## 6 COP      470</code></pre>
+<pre class="r"><code>SSE_catch &lt;- catch_long %&gt;% 
+  filter(Region == &quot;SSE&quot;)
+
+
+head(SSE_catch)</code></pre>
+<pre><code>## # A tibble: 6 x 4
+##   Region  Year species catch
+##   &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;   &lt;dbl&gt;
+## 1 SSE     1886 Chinook     0
+## 2 SSE     1886 Sockeye  5000
+## 3 SSE     1886 Coho        0
+## 4 SSE     1886 Pink        0
+## 5 SSE     1886 Chum        0
+## 6 SSE     1887 Chinook     0</code></pre>
+<pre class="r"><code>region_defs &lt;- read.csv(url(&quot;https://knb.ecoinformatics.org/knb/d1/mn/v2/object/df35b.303.1&quot;,
+                            method = &quot;libcurl&quot;),
+                        stringsAsFactors = FALSE) %&gt;% 
+    select(code, mgmtArea)
+
+head(region_defs)</code></pre>
+<pre><code>##      code                                  mgmtArea
+## 1     GSE              Unallocated Southeast Alaska
+## 2     NSE                 Northern Southeast Alaska
+## 3     SSE                 Southern Southeast Alaska
+## 4     YAK                                   Yakutat
+## 5 PWSmgmt      Prince William Sound Management Area
+## 6     BER Bering River Subarea Copper River Subarea</code></pre>
+<pre class="r"><code>catch_joined &lt;- left_join(catch_long, region_defs, by = c(&quot;Region&quot; = &quot;code&quot;))
+
+
+head(catch_joined)</code></pre>
+<pre><code>## # A tibble: 6 x 5
+##   Region  Year species catch mgmtArea                 
+##   &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;   &lt;dbl&gt; &lt;chr&gt;                    
+## 1 SSE     1886 Chinook     0 Southern Southeast Alaska
+## 2 SSE     1886 Sockeye  5000 Southern Southeast Alaska
+## 3 SSE     1886 Coho        0 Southern Southeast Alaska
+## 4 SSE     1886 Pink        0 Southern Southeast Alaska
+## 5 SSE     1886 Chum        0 Southern Southeast Alaska
+## 6 SSE     1887 Chinook     0 Southern Southeast Alaska</code></pre>
+<pre class="r"><code>region_defs &lt;- region_defs %&gt;% 
+  rename(Region = code, Region_Name = mgmtArea)
+
+
+catch_joined &lt;- left_join(catch_long, region_defs, by = c(&quot;Region&quot;))
+
+
+head(catch_joined)</code></pre>
+<pre><code>## # A tibble: 6 x 5
+##   Region  Year species catch Region_Name              
+##   &lt;chr&gt;  &lt;int&gt; &lt;chr&gt;   &lt;dbl&gt; &lt;chr&gt;                    
+## 1 SSE     1886 Chinook     0 Southern Southeast Alaska
+## 2 SSE     1886 Sockeye  5000 Southern Southeast Alaska
+## 3 SSE     1886 Coho        0 Southern Southeast Alaska
+## 4 SSE     1886 Pink        0 Southern Southeast Alaska
+## 5 SSE     1886 Chum        0 Southern Southeast Alaska
+## 6 SSE     1887 Chinook     0 Southern Southeast Alaska</code></pre>
+<pre class="r"><code>sites_df &lt;- data.frame(site = c(&quot;HAW-101&quot;,
+                                &quot;HAW-103&quot;,
+                                &quot;OAH-320&quot;,
+                                &quot;OAH-219&quot;,
+                                &quot;MAI-039&quot;),
+                       stringsAsFactors = FALSE)
+
+
+sites_df %&gt;% 
+  separate(site, c(&quot;island&quot;, &quot;site_number&quot;), &quot;-&quot;)</code></pre>
+<pre><code>##   island site_number
+## 1    HAW         101
+## 2    HAW         103
+## 3    OAH         320
+## 4    OAH         219
+## 5    MAI         039</code></pre>
+<pre class="r"><code>dates_df &lt;- data.frame(year = c(&quot;1930&quot;,
+                                &quot;1930&quot;,
+                                &quot;1930&quot;),
+                       month = c(&quot;12&quot;,
+                                &quot;12&quot;,
+                                &quot;12&quot;),
+                       day = c(&quot;14&quot;,
+                               &quot;15&quot;,
+                               &quot;16&quot;),
+                       stringsAsFactors = FALSE)
+
+
+dates_df %&gt;% 
+  unite(date, year, month, day, sep = &quot;-&quot;)</code></pre>
+<pre><code>##         date
+## 1 1930-12-14
+## 2 1930-12-15
+## 3 1930-12-16</code></pre>
+</div>
 </div>
 
 
