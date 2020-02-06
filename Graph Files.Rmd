@@ -167,7 +167,6 @@ leaflet(locations) %>%
               attribution = "Imagery reproduced from the GEBCO_2014 Grid, version 20150318, www.gebco.net") %>%
   addCircleMarkers(lng = ~Longitude,
                    lat = ~Latitude,
-                   popup = "<img src='https://www.nceas.ucsb.edu/files/newLogo_0.png' />"
                    popup = ~ Location,
                    radius = 5,
                    # set fill properties

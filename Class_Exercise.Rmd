@@ -1,0 +1,88 @@
+---
+title: "Class_Exercise"
+author: "Sudesh Srivastav"
+date: "2/5/2020"
+output: html_document
+---
+
+
+```{r}
+library(dplyr)
+library(tidyr)
+```
+stats:filter()
+packages_name
+
+
+```{r}
+esc <- read.csv(url("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/urn%3Auuid%3Af119a05b-bbe7-4aea-93c6-85434dcb1c5e", method = "libcurl"), 
+                          
+                    stringsAsFactors = FALSE)
+head(esc)
+```
+
+
+```{r}
+bb_sockeye_goals <- goals %>% 
+  filter(Region == "Bristol Bay", Species == "Sockeye") %>% 
+  mutate(Lower = as.integer(Lower), Initial.Year = as.integer(Initial.Year)) %>% 
+  select(System, Lower, Upper, Initial.Year) %>% 
+  drop_na()
+
+
+datatable(bb_sockeye_goals)
+```
+
+```{r}
+suppressPackageStartupMessages({
+  library(dplyr)
+  library(tidyr)
+  library(DT) # Just for display purposes
+})
+
+```
+
+```{r}
+# http://doi.org/10.5063/F1TX3CKH
+# Search "OceanAK"
+esc <- read.csv(url("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/urn%3Auuid%3Af119a05b-bbe7-4aea-93c6-85434dcb1c5e", method = "libcurl"), 
+                    stringsAsFactors = FALSE)
+
+
+# http://doi.org/10.5063/F1TQ5ZRG
+# Search "escapement goals", choose 2007-2015 dataset
+goals <- read.csv(url("https://knb.ecoinformatics.org/knb/d1/mn/v2/object/knb.92014.1", method = "libcurl"),
+                  stringsAsFactors = FALSE)
+```
+
+```{r}
+bb_sockeye_goals <- goals %>% 
+  filter(Region == "Bristol Bay", Species == "Sockeye") %>% 
+  mutate(Lower = as.integer(Lower), Initial.Year = as.integer(Initial.Year)) %>% 
+  select(System, Lower, Upper, Initial.Year) %>% 
+  drop_na()
+
+datatable(bb_sockeye_goals)
+```
+
+```{r}
+bb_sockeye_escapements <- esc %>% 
+  filter(SASAP.Region == "Bristol Bay", 
+         Species == "Sockeye",
+         Location %in% bb_sockeye_goals$System) %>%
+  separate(sampleDate, c("Year", "Month", "Day"), sep = "-") %>% 
+  group_by(Location, Year) %>% 
+  summarize(Escapement = sum(DailyCount))
+
+
+datatable(bb_sockeye_escapements)
+```
+```{r}
+bb_escapement_with_goals <- 
+  left_join(bb_sockeye_escapements, bb_sockeye_goals, by = c("Location" = "System")) %>% 
+  mutate(is_goal_within = ifelse(Escapement < Upper & Escapement > Lower, TRUE, FALSE),
+         drop_by_year = ifelse(Year >= Initial.Year, FALSE, TRUE))
+         
+datatable(bb_escapement_with_goals)
+```
+

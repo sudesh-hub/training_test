@@ -43,6 +43,10 @@ fahr_to_celsius <- function(fahr) {
 }
 ```
 
+```{r}
+# source file with full path
+source('conversions.R')
+```
 
 ```{r}
 celsius5<- fahr_to_celsius(airtemps[1])

@@ -143,4 +143,17 @@ dates_df <- data.frame(year = c("1930",
 dates_df %>% 
   unite(date, year, month, day, sep = "-")
 ```
+```{r}
+airtemps <- c(212, 30.3, 78, 32)
+celsius1 <- (airtemps[1]-32)*5/9
+celsius2 <- (airtemps[2]-32)*5/9
+celsius3 <- (airtemps[3]-32)*5/9
+```
+
+```{r}
+fahr_to_celsius <- function(fahr) {
+  celsius <- (fahr-32)*5/9
+  return(celsius)
+}
+```
 
